@@ -84,3 +84,27 @@ cd frontend && npm test && npm run lint && npm run build
 3. Busca `/api/` en `frontend/src`: solo aparece en `App.tsx:16`.
 4. Abre `backend/app/routes.py` en las líneas 65-68 y 94-104 (la fecha de hoy decide el año).
 5. Abre `backend/tests/test_routes.py` en la línea 160: fechas fijas de 2025-03.
+
+## Fase 3 — Reglas en `.agents/rules` y su validación
+
+Cada regla se probó con una tarea pequeña y real sobre este repo. Como en el entorno del agente no hay `pytest`, `vitest` ni Docker, la comprobación se hizo ejecutando el código real con herramientas equivalentes: 569 combinaciones de llamadas a los endpoints (con `fastapi` simulado), un sustituto mínimo de `vitest` ejecutando el archivo de tests real en 4 zonas horarias, y `tsc` global sobre los archivos de `src/lib`.
+
+| Regla | Tarea real | Comprobación | Resultado | Qué se refinó en la regla |
+|---|---|---|---|---|
+| `backend-api` | Sustituir el filtro de `business_type`, copiado en 4 endpoints más `/b2b` y `/b2c`, por `filter_by_business_type`. | Salida de las 569 combinaciones antes y después: idéntica byte a byte. `grep -c "if business_type is not None"` = 0. El archivo compila. | ✅ | Dónde crear un filtro nuevo y su patrón (`None` → devuelve la lista); `/b2b` y `/b2c` también lo usan. |
+| `backend-tests`, `backend-data` | Rehacer `test_metrics_comparison_returns_delta_fields` sin fechas fijas y comprobando valores. | Lógica del test ejecutada con las funciones reales: pasa. Con un fallo inyectado (sumar en vez de restar) el test nuevo falla y el antiguo no lo detecta. No queda ningún año fijo en `backend/tests`. | ✅ (el test no se pudo lanzar con `pytest`) | Receta del periodo anterior de `/comparison`; romper la lógica a propósito; recalcular el valor desde otra respuesta. |
+| `frontend-dates`, `frontend-tests`, `frontend-code` | Corregir `toYearMonthKey` (usa `slice(0, 7)`) y añadir un test de día 1 y día 31. | El test nuevo falla con el código antiguo en `America/Bogota` y `America/New_York` (5 pasan, 1 falla) y pasa en `UTC` y `Europe/Madrid`. Con el arreglo pasan los 6 tests en las 4 zonas. Con los datos reales del backend, el primer mes da 106 909,67 en las 4 zonas (antes 112 375,23 en América). `tsc` sin errores en `financial-utils.ts` y `financial-types.ts`. | ✅ (`vitest` real, lint y build sin ejecutar) | `UTC` y `Europe/Madrid` no detectan el fallo: hay que probar en una zona de América. |
+| `docs-and-commits` | Aclarar en `README.md` y `README.es.md` que el `.env` va en `frontend/.env`. | Los dos READMEs dicen lo mismo. `git check-ignore -v frontend/.env` confirma que `.gitignore:11` lo excluye. | ✅ | Cambiar «un commit por tarea» por «un commit por unidad coherente»; no citar líneas que se desplazan. |
+| `docker-env` | Solo comprobaciones por lectura: `.gitignore` y proxy `backend` (`vite.config.ts:13`). | Docker no se pudo ejecutar. | ❓ | Sección «No verificado en este entorno». |
+
+- **Un solo commit:** las 4 tareas y las reglas van juntas porque el ejercicio pide un commit dedicado por fase.
+- **Líneas desplazadas:** las líneas de `docs/engineering-findings.md` y de la Fase 1 se refieren al commit `954f812`. Tras la Fase 3, en `backend/app/routes.py` las líneas posteriores a la 145 se desplazan 11 por el nuevo helper.
+- **Sigue abierto:** la cabecera fija `2024 - Full Year` (`App.tsx:49`, hallazgo F15). No se corrigió porque requiere ver la interfaz en funcionamiento.
+
+### Pendiente de ejecutar (❓)
+
+```bash
+cd backend && pytest                      # incluye el test de comparación reescrito
+cd frontend && npm test                   # 6 tests
+cd frontend && TZ=America/New_York npm test
+```
