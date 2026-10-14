@@ -122,7 +122,7 @@ Datos: dos peticiones en paralelo, `TopCategoriesParams` = `{ ...dateRange, oper
 ### Modelo derivado (cliente)
 
 ```ts
-import { type BusinessType, type Category } from '../../src/lib/financial-types'
+import { type BusinessType, type Category } from '../src/lib/financial-types'
 
 interface CategoryShare {
   category: Category
