@@ -8,7 +8,7 @@ Las rutas llevan `archivo:línea`. Estado del repo al hacer la verificación: co
 ### Cómo se verificó
 
 - **Lectura completa** de los 41 archivos del repo (backend, frontend, Docker, README, AGENTS.md).
-- **Ejecución real de las funciones del backend** (`backend/app/routes.py`) con `pydantic` real y un stub mínimo de `fastapi` (solo `APIRouter` y `Query`). La capa HTTP no se ejecutó.
+- **Ejecución real de las funciones del backend** (`backend/app/routes.py`) con `pydantic` rea l y un stub mínimo de `fastapi` (solo `APIRouter` y `Query`). La capa HTTP no se ejecutó.
 - **Ejecución real de `financial-utils.ts`** con Node 22 sobre los datos que genera el backend, en 4 zonas horarias.
 - **No se pudo ejecutar** `docker compose up`, `pytest`, `vitest`, `npm run lint` ni `npm run build`: el entorno del agente no tiene acceso a PyPI ni a npm y su demonio de Docker no está activo. Por eso lo que depende de eso queda en ❓ (ver el final).
 
@@ -108,3 +108,7 @@ cd backend && pytest                      # incluye el test de comparación rees
 cd frontend && npm test                   # 6 tests
 cd frontend && TZ=America/New_York npm test
 ```
+## Ejercicio specs, Fase 1: exploración de la API
+- ❌ alerts: threshold acepta cualquier número ≥ 0, sin máximo; el PM pide 0.01 a 1.0 (comprobado en /docs)
+ - ❓ alerts: group_by admite day, week o month (por defecto month); el PM no dice cuál usar. Se fija month en la spec
+ - ✅ alerts: start_date y end_date son opcionales, formato fecha YYYY-MM-DD (comprobado en /docs)
