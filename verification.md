@@ -8,7 +8,7 @@ Las rutas llevan `archivo:línea`. Estado del repo al hacer la verificación: co
 ### Cómo se verificó
 
 - **Lectura completa** de los 41 archivos del repo (backend, frontend, Docker, README, AGENTS.md).
-- **Ejecución real de las funciones del backend** (`backend/app/routes.py`) con `pydantic` real y un stub mínimo de `fastapi` (solo `APIRouter` y `Query`). La capa HTTP no se ejecutó.
+- **Ejecución real de las funciones del backend** (`backend/app/routes.py`) con `pydantic` rea l y un stub mínimo de `fastapi` (solo `APIRouter` y `Query`). La capa HTTP no se ejecutó.
 - **Ejecución real de `financial-utils.ts`** con Node 22 sobre los datos que genera el backend, en 4 zonas horarias.
 - **No se pudo ejecutar** `docker compose up`, `pytest`, `vitest`, `npm run lint` ni `npm run build`: el entorno del agente no tiene acceso a PyPI ni a npm y su demonio de Docker no está activo. Por eso lo que depende de eso queda en ❓ (ver el final).
 
@@ -108,3 +108,36 @@ cd backend && pytest                      # incluye el test de comparación rees
 cd frontend && npm test                   # 6 tests
 cd frontend && TZ=America/New_York npm test
 ```
+## Ejercicio specs, Fase 1: exploración de la API
+- ❌ alerts: threshold acepta cualquier número ≥ 0, sin máximo; el PM pide 0.01 a 1.0 (comprobado en /docs)
+ - ❓ alerts: group_by admite day, week o month (por defecto month); el PM no dice cuál usar. Se fija month en la spec
+ - ✅ alerts: start_date y end_date son opcionales, formato fecha YYYY-MM-DD (comprobado en /docs)
+
+### Fase 1: resultado de la exploración (comprobado el 2026-10-14)
+
+Cómo se comprobó: se ejecutaron las funciones reales de `backend/app/routes.py` (pydantic real y `fastapi` simulado, sin servidor HTTP) y se leyó la firma de cada endpoint. Lo que depende de la capa HTTP (códigos 422, formato exacto de `/openapi.json`) queda como ❓ hasta verlo en `/docs`. Los importes y fechas de abajo son los de hoy: las fechas cambian con la ventana móvil de 12 meses.
+
+Endpoints de cada funcionalidad:
+
+- Funcionalidad 1 (filtro de fechas): `GET /api/metrics` y `GET /api/metrics/facets`.
+- Funcionalidad 2 (alertas): `GET /api/metrics/alerts`, y `facets` para el rango de fechas.
+- Funcionalidad 3 (B2B vs B2C): `GET /api/metrics/categories/top` (dos llamadas, una por línea de negocio) y `facets`.
+
+Resultados:
+
+- ✅ `facets` no tiene parámetros y devuelve `operation_types`, `business_types`, `categories`, `min_date` y `max_date` (fechas `YYYY-MM-DD`). Hoy: 2025-10-02 a 2026-09-28.
+- ✅ `GET /api/metrics` ya admite `start_date` y `end_date`, cada uno opcional por separado, con ambos extremos incluidos (`>=` y `<=`). No admite `business_type`.
+- ✅ Con un rango sin datos, o con `start_date` posterior a `end_date`, las listas salen vacías y no hay error (comprobado con `categories/top`; `alerts` usa el mismo filtro).
+- ❌ Funcionalidad 2: el PM habla de la «media móvil de los 3 períodos anteriores». La API calcula `baseline_average` como la media de **todos** los períodos anteriores del rango filtrado (`detect_outcome_alerts`). Se resuelve en la spec: la columna se llama «media de los períodos anteriores».
+- ✅ El primer período del rango nunca genera alerta (aún no hay histórico).
+- ❌ Funcionalidad 2: `increase_ratio` es un ratio con 4 decimales (1.0201 significa +102,01 %), no un porcentaje. La spec lo muestra multiplicado por 100.
+- ✅ `period` depende de `group_by`: `2025-12` (`month`), `2025-W40` (`week`) o `2025-10-02` (`day`).
+- ✅ El estado vacío de alertas se puede producir: con los datos de hoy, `threshold=5.0` devuelve `[]`, igual que un rango de un solo mes. Con `0.3` salen 4 alertas, con `0.01` salen 5, con `1.0` sale 1 y con `0` salen 6.
+- ❌ Funcionalidad 3: el PM pide «las 5 categorías principales de ingreso». Con `operation_type=income` la API devuelve solo **2** (`sales` y `others`) en B2B y en B2C. Con `outcome` devuelve 4. Nunca hay 5.
+- ❌ Funcionalidad 3: la respuesta de `categories/top` solo trae `category`, `operation_type` y `total_amount`. No trae porcentaje ni línea de negocio. El porcentaje se calcula en el frontend y la comparativa exige dos llamadas (`business_type=B2B` y `B2C`).
+- ❌ Funcionalidad 3: `operation_type` vale `outcome` por defecto; hay que enviar `income` siempre.
+- ❌ Funcionalidad 3: el PM dice que las categorías salen de `facets`, pero `facets.categories` es una lista global de 5 (incluye categorías que solo existen en gastos). Las categorías de cada tabla salen de la respuesta de `categories/top`.
+- ✅ `limit` admite de 1 a 20 (por defecto 5).
+- ✅ `threshold` admite desde 0, sin máximo (por defecto 0.3), y `group_by` vale `day`, `week` o `month` (por defecto `month`).
+- ❓ Códigos 422 por fecha inválida, `threshold` negativo, `limit` fuera de 1 a 20 o valores fuera del conjunto permitido: no comprobado por HTTP.
+- ❓ La moneda: ningún campo de la API la indica.
