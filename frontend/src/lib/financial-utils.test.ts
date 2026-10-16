@@ -44,6 +44,41 @@ describe("computeKPIs", () => {
     });
   });
 
+  it("returns zeros for an empty list", () => {
+    expect(computeKPIs([])).toEqual({
+      totalIncome: 0,
+      totalOutcome: 0,
+      profit: 0,
+      profitPercent: 0,
+    });
+  });
+
+  it("reports a negative profit and margin when outcome exceeds income", () => {
+    const lossMakingMovements: FinancialMovement[] = [
+      {
+        create_date: "2025-06-10",
+        amount: 100,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2C",
+      },
+      {
+        create_date: "2025-06-12",
+        amount: 150,
+        operation_type: "outcome",
+        category: "suppliers",
+        business_type: "B2C",
+      },
+    ];
+
+    expect(computeKPIs(lossMakingMovements)).toEqual({
+      totalIncome: 100,
+      totalOutcome: 150,
+      profit: -50,
+      profitPercent: -50,
+    });
+  });
+
   it("returns 0 profitPercent when there is no income", () => {
     const onlyOutcomes: FinancialMovement[] = [
       {
@@ -61,6 +96,10 @@ describe("computeKPIs", () => {
 });
 
 describe("computeMonthlyData", () => {
+  it("returns no points for an empty list", () => {
+    expect(computeMonthlyData([])).toEqual([]);
+  });
+
   it("returns chronological year-month points with aggregated totals", () => {
     const unsortedCrossYearMovements: FinancialMovement[] = [
       {
@@ -140,6 +179,12 @@ describe("computeMonthlyData", () => {
 describe("formatters", () => {
   it("formats currency without decimals", () => {
     expect(formatCurrency(1234.56)).toBe("$1,235");
+  });
+
+  it("formats zero and negative amounts, and gives the same result on repeated calls", () => {
+    expect(formatCurrency(0)).toBe("$0");
+    expect(formatCurrency(-1234.5)).toBe("-$1,235");
+    expect(formatCurrency(-1234.5)).toBe("-$1,235");
   });
 
   it("formats percent with one decimal", () => {
