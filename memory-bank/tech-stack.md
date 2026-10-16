@@ -31,5 +31,5 @@ Verificado contra el commit `c06ab07`. Las versiones son las declaradas en los a
 |---|---|
 | `docker compose up --build` (arranque) | ❓ no ejecutado: sin Docker ni red en el entorno de verificación |
 | `cd backend && pytest` (15 tests) | ❓ no ejecutado; la lógica de los tests se comprobó con las funciones reales |
-| `cd frontend && npm test` (6 tests) y `TZ=America/New_York npm test` | ❓ `vitest` no se pudo instalar; los 6 tests se ejecutaron con un sustituto mínimo y pasan en 4 zonas horarias |
+| `cd frontend && npm test` (10 tests desde `c4fa345`) y `TZ=America/New_York npm test` | ❓ `vitest` no se pudo instalar; los 10 tests se ejecutaron con un sustituto mínimo y pasan en `UTC`, `Europe/Madrid` y `America/New_York` (los 6 originales, en 4 zonas) |
 | `cd frontend && npm run lint` / `npm run build` (`tsc -b && vite build`) | ❓ no ejecutados |
