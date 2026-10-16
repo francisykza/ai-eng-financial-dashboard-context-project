@@ -7,6 +7,7 @@ Memoria del proyecto para el siguiente contribuidor o agente. **Verificado contr
 | `product-overview.md` | Qué es el producto, qué muestra, modelo de datos y API. |
 | `tech-stack.md` | Lenguajes, frameworks, dependencias, infraestructura y comandos. |
 | `current-state.md` | Qué funciona, huecos conocidos y siguientes prioridades. |
+| `progress.md` | Skills de agente aplicadas, cambios verificados y lo que queda sin verificar. |
 
 ## Cómo usarlo y mantenerlo
 
